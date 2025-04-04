@@ -289,6 +289,9 @@
             });
         });
 
+        // Backend API URL
+        const API_BASE_URL = 'https://medi-assist.onrender.com';
+
         document.getElementById('signupForm').addEventListener('submit', async function(event) {
             event.preventDefault();
             
@@ -302,11 +305,13 @@
             };
             
             try {
-                const response = await fetch('/api/signup', {
+                const response = await fetch(`${API_BASE_URL}/api/signup`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify(formData)
                 });
 
@@ -317,7 +322,7 @@
                     document.querySelector('.container').classList.add('success-animation');
                     setTimeout(() => {
                         alert('Sign-up successful! Please log in.');
-                        window.location.href = '/sign_in.html';
+                        window.location.href = 'sign_in.html';
                     }, 800);
                 } else {
                     // Add shake animation to form on error
@@ -325,11 +330,16 @@
                     setTimeout(() => {
                         document.querySelector('.container').classList.remove('error-animation');
                     }, 500);
-                    alert(data.message);
+                    alert(data.message || 'Sign up failed. Please try again.');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('An error occurred. Please try again.');
+                alert('An error occurred while connecting to the server. Please try again.');
+                // Add shake animation to form on error
+                document.querySelector('.container').classList.add('error-animation');
+                setTimeout(() => {
+                    document.querySelector('.container').classList.remove('error-animation');
+                }, 500);
             } finally {
                 // Remove click animation
                 setTimeout(() => {
