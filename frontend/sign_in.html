@@ -1,255 +1,407 @@
-const express = require('express');
-const path = require('path');
-const fetch = require('node-fetch');  // Make sure to install node-fetch if not already installed
-const cors = require('cors');  // Make sure to install cors if not already installed
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-const API_BASE_URL = 'https://medi-assist.onrender.com';
-
-// Enable CORS for both local development and production
-const allowedOrigins = [
-    'http://localhost:3000',
-    'https://frontend-kew6.onrender.com'
-];
-
-app.use(cors({ 
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            return callback(null, false);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - MediAssist</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+        
+        /* Keyframes for animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        return callback(null, true);
-    },
-    methods: ['GET', 'POST'],
-    credentials: true
-}));
-
-// Fetch configuration
-const fetchConfig = {
-    timeout: 15000, // 15 seconds timeout
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    }
-};
-
-// Helper function for API calls
-async function makeAPICall(url, options) {
-    console.log(`Making API call to: ${url}`);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), fetchConfig.timeout);
-    
-    try {
-        const response = await fetch(url, {
-            ...options,
-            ...fetchConfig,
-            signal: controller.signal,
-            headers: { ...fetchConfig.headers, ...options?.headers }
-        });
         
-        clearTimeout(timeout);
-        console.log(`Response status: ${response.status} for ${url}`);
+        @keyframes slideIn {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
         
-        if (!response.ok) {
-            const errorData = await response.text();
-            console.error('Backend error:', {
-                endpoint: url,
-                status: response.status,
-                statusText: response.statusText,
-                body: errorData
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
+        }
+        
+        @keyframes success {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 200, 83, 0.5); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            20% {
+                transform: scale(25, 25);
+                opacity: 0.3;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(40, 40);
+            }
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(-45deg, #007bff, #00bcd4, #6a11cb, #2575fc);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 320px;
+            text-align: center;
+            animation: fadeIn 0.8s ease-out forwards;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+        
+        .container.animate-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        
+        .container.error-animation {
+            animation: shake 0.5s ease-in-out;
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.2);
+        }
+        
+        .container.success-animation {
+            animation: success 0.8s ease-in-out forwards;
+            border: 1px solid rgba(0, 200, 83, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 200, 83, 0.2);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            position: relative;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+        
+        h1::after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(to right, #007bff, #00bcd4);
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 3px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+            animation: slideIn 0.5s ease-out forwards;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        .input-focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+            outline: none;
+        }
+        
+        button {
+            background: linear-gradient(to right, #007bff, #00bcd4);
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 500;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 5px;
+            animation: slideIn 0.7s ease-out forwards;
+            font-family: 'Poppins', sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button:hover {
+            background: linear-gradient(to right, #0056b3, #0097a7);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        button.button-hover {
+            animation: pulse 1s infinite;
+        }
+        
+        button.button-clicked {
+            transform: scale(0.95);
+            opacity: 0.9;
+        }
+        
+        button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        button:hover::after {
+            animation: ripple 1s ease-out;
+        }
+        
+        p {
+            margin: 20px 0 5px;
+            font-size: 14px;
+            color: #555;
+            animation: fadeIn 0.9s ease-out forwards;
+        }
+        
+        p a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        p a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        
+        .forgot-password {
+            display: inline-block;
+            margin: 12px 0;
+            color: #007bff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        
+        .forgot-password:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .loading {
+            position: relative;
+            pointer-events: none;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome Back</h1>
+        <form id="signinForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div id="errorMessage" class="error-message"></div>
+            <a href="#" class="forgot-password">Forgot Password?</a>
+            <button type="submit" id="signInBtn">Sign In</button>
+        </form>
+        <p>Don't have an account? <a href="sign_up.html">Sign Up</a></p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('signinForm');
+            const signInBtn = document.getElementById('signInBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Backend API URL
+            const API_BASE_URL = 'https://medi-assist.onrender.com';
+            
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                
+                // Clear previous error message
+                errorMessage.style.display = 'none';
+                errorMessage.textContent = '';
+                
+                // Add loading state
+                signInBtn.classList.add('loading');
+                signInBtn.textContent = 'Signing in...';
+                
+                const formData = {
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value
+                };
+                
+                try {
+                    console.log('Attempting to sign in...', { email: formData.email });
+                    const response = await fetch(`${API_BASE_URL}/api/signin`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Origin': window.location.origin
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(formData)
+                    });
+
+                    console.log('Response received:', response.status);
+                    let data;
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else {
+                        const text = await response.text();
+                        console.error('Non-JSON response:', text);
+                        throw new Error('Invalid response format from server');
+                    }
+                    
+                    if (response.ok && data.success) {
+                        // Show success animation
+                        document.querySelector('.container').classList.add('success-animation');
+                        
+                        // Store user data if needed
+                        if (data.user) {
+                            localStorage.setItem('user', JSON.stringify(data.user));
+                        }
+                        
+                        // Redirect after animation
+                        setTimeout(() => {
+                            window.location.href = 'main_websitepage.html';
+                        }, 800);
+                    } else {
+                        // Show error message
+                        const errorMsg = data.message || (response.status === 401 ? 'Invalid email or password' : 'Login failed');
+                        errorMessage.textContent = errorMsg;
+                        errorMessage.style.display = 'block';
+                        
+                        // Add shake animation
+                        document.querySelector('.container').classList.add('error-animation');
+                        setTimeout(() => {
+                            document.querySelector('.container').classList.remove('error-animation');
+                        }, 500);
+                    }
+                } catch (error) {
+                    console.error('Sign in error:', error);
+                    errorMessage.textContent = 'Unable to connect to the server. Please try again later.';
+                    errorMessage.style.display = 'block';
+                    
+                    // Add shake animation
+                    document.querySelector('.container').classList.add('error-animation');
+                    setTimeout(() => {
+                        document.querySelector('.container').classList.remove('error-animation');
+                    }, 500);
+                } finally {
+                    // Remove loading state
+                    signInBtn.classList.remove('loading');
+                    signInBtn.textContent = 'Sign In';
+                }
             });
-            throw new Error(`Backend server error: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log(`Successful response from ${url}`);
-        return data;
-    } catch (error) {
-        clearTimeout(timeout);
-        console.error(`API call error for ${url}:`, error);
-        if (error.name === 'AbortError') {
-            throw new Error('Request timeout - backend server not responding');
-        }
-        throw error;
-    }
-}
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname)));
-
-// Add health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Add backend health check
-app.get('/api/health', async (req, res) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/health`);
-        if (response.ok) {
-            res.json({ status: 'ok', backend: 'connected' });
-        } else {
-            res.status(503).json({ status: 'error', message: 'Backend service unavailable' });
-        }
-    } catch (error) {
-        console.error('Backend health check failed:', error);
-        res.status(503).json({ status: 'error', message: 'Cannot connect to backend' });
-    }
-});
-
-// Serve Static HTML Pages
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'sign_up.html')));
-app.get('/signin', (req, res) => res.sendFile(path.join(__dirname, 'sign_in.html')));
-app.get('/main', (req, res) => res.sendFile(path.join(__dirname, 'main_websitepage.html')));
-
-// User Registration (Sign Up)
-app.post('/api/signup', async (req, res) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/signup`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(req.body)
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.text();
-            console.error('Backend error:', {
-                status: response.status,
-                statusText: response.statusText,
-                body: errorData
+            
+            // Input field animations
+            const inputs = document.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.classList.add('input-focus');
+                });
+                
+                input.addEventListener('blur', function() {
+                    if (this.value === '') {
+                        this.classList.remove('input-focus');
+                    }
+                });
             });
-            return res.status(response.status).json({ 
-                success: false, 
-                message: `Backend server error: ${response.status} ${response.statusText}`,
-                details: errorData
-            });
-        }
-        
-        const data = await response.json();
-        res.json(data);
-    } catch (error) {
-        console.error('Connection error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error connecting to backend server',
-            error: error.message
         });
-    }
-});
-
-// User Login (Sign In)
-app.post('/api/signin', async (req, res) => {
-    try {
-        const data = await makeAPICall(`${API_BASE_URL}/api/signin`, {
-            method: 'POST',
-            body: JSON.stringify(req.body)
-        });
-        res.json(data);
-    } catch (error) {
-        console.error('Sign in error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-
-// Emergency service route
-app.get('/emergency', (req, res) => {
-    res.sendFile(path.join(__dirname, 'final_guestpage.html'));
-});
-
-// API for emergency service
-app.post('/api/emergency-connect', async (req, res) => {
-    try {
-        const data = await makeAPICall(`${API_BASE_URL}/api/emergency-connect`, {
-            method: 'POST',
-            body: JSON.stringify(req.body)
-        });
-        res.json(data);
-    } catch (error) {
-        console.error('Emergency connect error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-
-// API for mobile clinic requests
-app.post('/api/request-mobile-clinic', async (req, res) => {
-    try {
-        const data = await makeAPICall(`${API_BASE_URL}/api/request-mobile-clinic`, {
-            method: 'POST',
-            body: JSON.stringify(req.body)
-        });
-        res.json(data);
-    } catch (error) {
-        console.error('Mobile clinic request error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-
-// API for nearby facilities
-app.get('/api/nearby-facilities', async (req, res) => {
-    try {
-        const data = await makeAPICall(
-            `${API_BASE_URL}/api/nearby-facilities?${new URLSearchParams(req.query)}`
-        );
-        res.json(data);
-    } catch (error) {
-        console.error('Nearby facilities error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-
-// Additional routes
-app.get('/splash', (req, res) => {
-    res.sendFile(path.join(__dirname, 'splash.html'));
-});
-
-app.get('/onboarding', (req, res) => {
-    res.sendFile(path.join(__dirname, 'advertisment_all_login_Connected.html'));
-});
-
-// Start the server with better logging
-app.listen(PORT, () => {
-    console.log(`
-Server started successfully!
------------------------------
-Local: http://localhost:${PORT}
-Time: ${new Date().toISOString()}
------------------------------
-Routes available:
-- GET  /health           (Server health check)
-- GET  /api/health       (Backend health check)
-- GET  /                 (Home page)
-- GET  /signup          (Sign up page)
-- GET  /signin          (Sign in page)
-- GET  /main            (Main website page)
-- GET  /emergency       (Emergency page)
-- POST /api/signup      (Sign up API)
-- POST /api/signin      (Sign in API)
-- POST /api/emergency-connect    (Emergency service)
-- POST /api/request-mobile-clinic (Mobile clinic)
-- GET  /api/nearby-facilities    (Nearby facilities)
------------------------------
-`);
-});
+    </script>
+</body>
+</html>
