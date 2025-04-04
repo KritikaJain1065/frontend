@@ -1,10 +1,18 @@
 const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');  // Make sure to install node-fetch if not already installed
+const cors = require('cors');  // Make sure to install cors if not already installed
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_BASE_URL = 'https://medi-assist.onrender.com';
+
+// Enable CORS for the frontend
+app.use(cors({ 
+    origin: 'https://frontend-kew6.onrender.com',
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 
 // Fetch configuration
 const fetchConfig = {
