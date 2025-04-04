@@ -298,13 +298,15 @@
     </div>
 
     <script>
+        // Environment-based API URL configuration
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000'
+            : 'https://medi-assist.onrender.com';
+        
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('signinForm');
             const signInBtn = document.getElementById('signInBtn');
             const errorMessage = document.getElementById('errorMessage');
-            
-            // Backend API URL
-            const API_BASE_URL = 'https://medi-assist.onrender.com';
             
             form.addEventListener('submit', async function(event) {
                 event.preventDefault();
