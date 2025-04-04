@@ -7,16 +7,28 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_BASE_URL = 'https://medi-assist.onrender.com';
 
-// Enable CORS for the frontend
+// Enable CORS for both local development and production
+const allowedOrigins = [
+    'http://localhost:3000',
+    'https://frontend-kew6.onrender.com'
+];
+
 app.use(cors({ 
-    origin: 'https://frontend-kew6.onrender.com',
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            return callback(null, false);
+        }
+        return callback(null, true);
+    },
     methods: ['GET', 'POST'],
     credentials: true
 }));
 
 // Fetch configuration
 const fetchConfig = {
-    timeout: 10000, // 10 seconds timeout
+    timeout: 15000, // 15 seconds timeout
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -25,6 +37,7 @@ const fetchConfig = {
 
 // Helper function for API calls
 async function makeAPICall(url, options) {
+    console.log(`Making API call to: ${url}`);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), fetchConfig.timeout);
     
@@ -37,6 +50,7 @@ async function makeAPICall(url, options) {
         });
         
         clearTimeout(timeout);
+        console.log(`Response status: ${response.status} for ${url}`);
         
         if (!response.ok) {
             const errorData = await response.text();
@@ -49,9 +63,12 @@ async function makeAPICall(url, options) {
             throw new Error(`Backend server error: ${response.status} ${response.statusText}`);
         }
         
-        return await response.json();
+        const data = await response.json();
+        console.log(`Successful response from ${url}`);
+        return data;
     } catch (error) {
         clearTimeout(timeout);
+        console.error(`API call error for ${url}:`, error);
         if (error.name === 'AbortError') {
             throw new Error('Request timeout - backend server not responding');
         }
@@ -63,6 +80,26 @@ async function makeAPICall(url, options) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname)));
+
+// Add health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Add backend health check
+app.get('/api/health', async (req, res) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/health`);
+        if (response.ok) {
+            res.json({ status: 'ok', backend: 'connected' });
+        } else {
+            res.status(503).json({ status: 'error', message: 'Backend service unavailable' });
+        }
+    } catch (error) {
+        console.error('Backend health check failed:', error);
+        res.status(503).json({ status: 'error', message: 'Cannot connect to backend' });
+    }
+});
 
 // Serve Static HTML Pages
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -110,17 +147,18 @@ app.post('/api/signup', async (req, res) => {
 // User Login (Sign In)
 app.post('/api/signin', async (req, res) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/signin`, {
+        const data = await makeAPICall(`${API_BASE_URL}/api/signin`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
             body: JSON.stringify(req.body)
         });
-        const data = await response.json();
         res.json(data);
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error connecting to backend server' });
+        console.error('Sign in error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
     }
 });
 
@@ -150,17 +188,18 @@ app.post('/api/emergency-connect', async (req, res) => {
 // API for mobile clinic requests
 app.post('/api/request-mobile-clinic', async (req, res) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/request-mobile-clinic`, {
+        const data = await makeAPICall(`${API_BASE_URL}/api/request-mobile-clinic`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
             body: JSON.stringify(req.body)
         });
-        const data = await response.json();
         res.json(data);
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error connecting to backend server' });
+        console.error('Mobile clinic request error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
     }
 });
 
@@ -190,7 +229,27 @@ app.get('/onboarding', (req, res) => {
     res.sendFile(path.join(__dirname, 'advertisment_all_login_Connected.html'));
 });
 
-// Start the server
+// Start the server with better logging
 app.listen(PORT, () => {
-    console.log(`Frontend server running on port ${PORT}`);
+    console.log(`
+Server started successfully!
+-----------------------------
+Local: http://localhost:${PORT}
+Time: ${new Date().toISOString()}
+-----------------------------
+Routes available:
+- GET  /health           (Server health check)
+- GET  /api/health       (Backend health check)
+- GET  /                 (Home page)
+- GET  /signup          (Sign up page)
+- GET  /signin          (Sign in page)
+- GET  /main            (Main website page)
+- GET  /emergency       (Emergency page)
+- POST /api/signup      (Sign up API)
+- POST /api/signin      (Sign in API)
+- POST /api/emergency-connect    (Emergency service)
+- POST /api/request-mobile-clinic (Mobile clinic)
+- GET  /api/nearby-facilities    (Nearby facilities)
+-----------------------------
+`);
 });
