@@ -5,25 +5,35 @@ const cors = require('cors');  // Make sure to install cors if not already insta
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API_BASE_URL = 'https://medi-assist.onrender.com';
 
-// Enable CORS for both local development and production
+// Environment-based API URL configuration
+const API_BASE_URL = process.env.NODE_ENV === 'production'
+    ? 'https://medi-assist.onrender.com'
+    : 'http://localhost:3000';
+
+// Updated CORS configuration with all necessary origins
 const allowedOrigins = [
     'http://localhost:3000',
-    'https://frontend-kew6.onrender.com'
+    'https://frontend-kew6.onrender.com',
+    'https://medi-assist.onrender.com',
+    'https://medi-assist-frontend.onrender.com'
 ];
 
 app.use(cors({ 
     origin: function(origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
+        
         if (allowedOrigins.indexOf(origin) === -1) {
+            console.log(`Blocked request from origin: ${origin}`);
             return callback(null, false);
         }
+        console.log(`Allowed request from origin: ${origin}`);
         return callback(null, true);
     },
     methods: ['GET', 'POST'],
-    credentials: true
+    credentials: true,
+    optionsSuccessStatus: 200 // For legacy browser support
 }));
 
 // Fetch configuration
