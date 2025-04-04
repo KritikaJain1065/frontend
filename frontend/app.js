@@ -6,6 +6,51 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_BASE_URL = 'https://medi-assist.onrender.com';
 
+// Fetch configuration
+const fetchConfig = {
+    timeout: 10000, // 10 seconds timeout
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+};
+
+// Helper function for API calls
+async function makeAPICall(url, options) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), fetchConfig.timeout);
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            ...fetchConfig,
+            signal: controller.signal,
+            headers: { ...fetchConfig.headers, ...options?.headers }
+        });
+        
+        clearTimeout(timeout);
+        
+        if (!response.ok) {
+            const errorData = await response.text();
+            console.error('Backend error:', {
+                endpoint: url,
+                status: response.status,
+                statusText: response.statusText,
+                body: errorData
+            });
+            throw new Error(`Backend server error: ${response.status} ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        clearTimeout(timeout);
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout - backend server not responding');
+        }
+        throw error;
+    }
+}
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -27,10 +72,30 @@ app.post('/api/signup', async (req, res) => {
             },
             body: JSON.stringify(req.body)
         });
+        
+        if (!response.ok) {
+            const errorData = await response.text();
+            console.error('Backend error:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorData
+            });
+            return res.status(response.status).json({ 
+                success: false, 
+                message: `Backend server error: ${response.status} ${response.statusText}`,
+                details: errorData
+            });
+        }
+        
         const data = await response.json();
         res.json(data);
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error connecting to backend server' });
+        console.error('Connection error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error connecting to backend server',
+            error: error.message
+        });
     }
 });
 
@@ -59,17 +124,18 @@ app.get('/emergency', (req, res) => {
 // API for emergency service
 app.post('/api/emergency-connect', async (req, res) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/emergency-connect`, {
+        const data = await makeAPICall(`${API_BASE_URL}/api/emergency-connect`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
             body: JSON.stringify(req.body)
         });
-        const data = await response.json();
         res.json(data);
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error connecting to backend server' });
+        console.error('Emergency connect error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
     }
 });
 
@@ -93,11 +159,17 @@ app.post('/api/request-mobile-clinic', async (req, res) => {
 // API for nearby facilities
 app.get('/api/nearby-facilities', async (req, res) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/nearby-facilities?${new URLSearchParams(req.query)}`);
-        const data = await response.json();
+        const data = await makeAPICall(
+            `${API_BASE_URL}/api/nearby-facilities?${new URLSearchParams(req.query)}`
+        );
         res.json(data);
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error connecting to backend server' });
+        console.error('Nearby facilities error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
     }
 });
 
