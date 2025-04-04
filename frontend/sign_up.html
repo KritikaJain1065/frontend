@@ -255,8 +255,13 @@
 
     
     <script>
-        // Add animation classes to elements as they load
+        // Backend API URL
+        const API_BASE_URL = 'https://medi-assist.onrender.com';
+
         document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('signupForm');
+            const signUpBtn = document.getElementById('signUpBtn');
+            
             // Add subtle animation to form container on load
             setTimeout(() => {
                 document.querySelector('.container').classList.add('animate-in');
@@ -287,65 +292,73 @@
                     this.classList.remove('button-hover');
                 });
             });
-        });
 
-        // Backend API URL
-        const API_BASE_URL = 'https://medi-assist.onrender.com';
-
-        document.getElementById('signupForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
-            
-            // Add animation to button when clicked
-            document.getElementById('signUpBtn').classList.add('button-clicked');
-            
-            const formData = {
-                username: document.getElementById('username').value,
-                email: document.getElementById('email').value,
-                password: document.getElementById('password').value
-            };
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/signup`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
                 
-                if (data.success) {
-                    // Show success animation before redirect
-                    document.querySelector('.container').classList.add('success-animation');
-                    setTimeout(() => {
-                        alert('Sign-up successful! Please log in.');
-                        window.location.href = 'sign_in.html';
-                    }, 800);
-                } else {
+                // Add loading state
+                signUpBtn.classList.add('loading');
+                signUpBtn.textContent = 'Creating Account...';
+                
+                const formData = {
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value
+                };
+                
+                try {
+                    console.log('Attempting to sign up...', { email: formData.email, username: formData.username });
+                    const response = await fetch(`${API_BASE_URL}/api/signup`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Origin': window.location.origin
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(formData)
+                    });
+
+                    console.log('Response received:', response.status);
+                    let data;
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        data = await response.json();
+                    } else {
+                        const text = await response.text();
+                        console.error('Non-JSON response:', text);
+                        throw new Error('Invalid response format from server');
+                    }
+                    
+                    if (response.ok && data.success) {
+                        // Show success animation before redirect
+                        document.querySelector('.container').classList.add('success-animation');
+                        setTimeout(() => {
+                            alert('Account created successfully! Please log in.');
+                            window.location.href = 'sign_in.html';
+                        }, 800);
+                    } else {
+                        // Add shake animation to form on error
+                        document.querySelector('.container').classList.add('error-animation');
+                        setTimeout(() => {
+                            document.querySelector('.container').classList.remove('error-animation');
+                        }, 500);
+                        alert(data.message || 'Failed to create account. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Sign up error:', error);
+                    alert('Unable to connect to the server. Please try again later.');
                     // Add shake animation to form on error
                     document.querySelector('.container').classList.add('error-animation');
                     setTimeout(() => {
                         document.querySelector('.container').classList.remove('error-animation');
                     }, 500);
-                    alert(data.message || 'Sign up failed. Please try again.');
+                } finally {
+                    // Remove loading state
+                    signUpBtn.classList.remove('loading');
+                    signUpBtn.textContent = 'Sign Up';
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred while connecting to the server. Please try again.');
-                // Add shake animation to form on error
-                document.querySelector('.container').classList.add('error-animation');
-                setTimeout(() => {
-                    document.querySelector('.container').classList.remove('error-animation');
-                }, 500);
-            } finally {
-                // Remove click animation
-                setTimeout(() => {
-                    document.getElementById('signUpBtn').classList.remove('button-clicked');
-                }, 300);
-            }
+            });
         });
     </script>
 </body>
