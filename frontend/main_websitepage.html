@@ -1256,9 +1256,13 @@
     </div>
 
     <script>
+        // Environment-based API URL configuration
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000'
+            : 'https://medi-assist.onrender.com';
+        
         // Global variables
         let currentLanguage = 'en';
-        const API_BASE_URL = '/api';
 
         // Function to fetch translations from the backend
         async function fetchTranslations(lang) {
