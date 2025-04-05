@@ -298,10 +298,8 @@
     </div>
 
     <script>
-        // Environment-based API URL configuration
-        const API_BASE_URL = window.location.hostname === 'localhost'
-            ? 'http://localhost:3000'
-            : 'https://medi-assist.onrender.com';
+        // Backend API URL
+        const API_BASE_URL = 'https://medi-assist.onrender.com/api';
         
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('signinForm');
@@ -310,13 +308,7 @@
             
             form.addEventListener('submit', async function(event) {
                 event.preventDefault();
-                
-                // Clear previous error message
                 errorMessage.style.display = 'none';
-                errorMessage.textContent = '';
-                
-                // Add loading state
-                signInBtn.classList.add('loading');
                 signInBtn.textContent = 'Signing in...';
                 
                 const formData = {
@@ -325,67 +317,42 @@
                 };
                 
                 try {
-                    console.log('Attempting to sign in...', { email: formData.email });
-                    const response = await fetch(`${API_BASE_URL}/api/signin`, {
+                    const response = await fetch(`${API_BASE_URL}/signin`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'Origin': window.location.origin
+                            'Accept': 'application/json'
                         },
-                        credentials: 'include',
                         body: JSON.stringify(formData)
                     });
 
-                    console.log('Response received:', response.status);
-                    let data;
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        data = await response.json();
-                    } else {
-                        const text = await response.text();
-                        console.error('Non-JSON response:', text);
-                        throw new Error('Invalid response format from server');
-                    }
+                    const data = await response.json();
                     
                     if (response.ok && data.success) {
-                        // Show success animation
                         document.querySelector('.container').classList.add('success-animation');
-                        
-                        // Store user data if needed
                         if (data.user) {
                             localStorage.setItem('user', JSON.stringify(data.user));
                         }
-                        
-                        // Redirect after animation
                         setTimeout(() => {
                             window.location.href = 'main_websitepage.html';
                         }, 800);
                     } else {
-                        // Show error message
-                        const errorMsg = data.message || (response.status === 401 ? 'Invalid email or password' : 'Login failed');
+                        const errorMsg = data.message || 'Invalid email or password';
                         errorMessage.textContent = errorMsg;
                         errorMessage.style.display = 'block';
-                        
-                        // Add shake animation
                         document.querySelector('.container').classList.add('error-animation');
                         setTimeout(() => {
                             document.querySelector('.container').classList.remove('error-animation');
                         }, 500);
                     }
                 } catch (error) {
-                    console.error('Sign in error:', error);
                     errorMessage.textContent = 'Unable to connect to the server. Please try again later.';
                     errorMessage.style.display = 'block';
-                    
-                    // Add shake animation
                     document.querySelector('.container').classList.add('error-animation');
                     setTimeout(() => {
                         document.querySelector('.container').classList.remove('error-animation');
                     }, 500);
                 } finally {
-                    // Remove loading state
-                    signInBtn.classList.remove('loading');
                     signInBtn.textContent = 'Sign In';
                 }
             });
