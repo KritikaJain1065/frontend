@@ -259,8 +259,8 @@
     </div>
 
     <script>
-        // Base URL for API
-        const API_URL = 'http://localhost:3000/api';
+        // Backend API URL
+        const API_BASE_URL = 'https://medi-assist.onrender.com/api';
         
         // DOM Elements
         const appointmentForm = document.getElementById('appointmentForm');
@@ -283,7 +283,7 @@
         // Fetch doctors from API
         async function fetchDoctors() {
             try {
-                const response = await fetch(`${API_URL}/doctors`);
+                const response = await fetch(`${API_BASE_URL}/doctors`);
                 if (!response.ok) {
                     throw new Error('Failed to fetch doctors');
                 }
@@ -379,11 +379,11 @@
             };
             
             console.log('Form Data:', formData);
-            console.log('API URL:', API_URL);
+            console.log('API URL:', API_BASE_URL);
             
             try {
-                console.log('Sending request to:', `${API_URL}/appointments`);
-                const response = await fetch(`${API_URL}/appointments`, {
+                console.log('Sending request to:', `${API_BASE_URL}/appointments`);
+                const response = await fetch(`${API_BASE_URL}/appointments`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
